@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coursera 10x Controller</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header with Brand & Live Badge -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="url(#bolt-grad)" stroke="#818CF8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="bolt-grad" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#818CF8"/>
+                <stop offset="1" stop-color="#C084FC"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Coursera Speed</h1>
+          <span class="version">v1.0 • MV3</span>
+        </div>
+      </div>
+      <div class="status-indicator" id="status-badge">
+        <span class="status-dot"></span>
+        <span class="status-text" id="status-text">Active</span>
+      </div>
+    </header>
+
+    <!-- Master Switch Card -->
+    <div class="card master-card">
+      <div class="card-info">
+        <span class="card-label">Turbo Acceleration</span>
+        <span class="card-desc">Override player & telemetry locks</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-enabled" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Speed Adjustment Section -->
+    <div class="card speed-card">
+      <div class="speed-header">
+        <span class="card-label">Target Multiplier</span>
+        <div class="speed-value-display">
+          <input type="number" id="speed-input" min="0.5" max="16.0" step="0.5" value="16.0">
+          <span class="unit">x</span>
+        </div>
+      </div>
+
+      <!-- Range Slider -->
+      <div class="slider-wrapper">
+        <input type="range" id="speed-slider" min="0.5" max="16.0" step="0.5" value="16.0">
+        <div class="slider-ticks">
+          <span>0.5x</span>
+          <span>5x</span>
+          <span>10x</span>
+          <span class="tick-highlight">16x</span>
+        </div>
+      </div>
+
+      <!-- Quick Preset Buttons -->
+      <div class="preset-grid">
+        <button type="button" class="preset-btn" data-speed="1.0">1.0x</button>
+        <button type="button" class="preset-btn" data-speed="2.0">2.0x</button>
+        <button type="button" class="preset-btn" data-speed="5.0">5.0x</button>
+        <button type="button" class="preset-btn" data-speed="10.0">10.0x</button>
+        <button type="button" class="preset-btn active" data-speed="16.0">16.0x</button>
+      </div>
+    </div>
+
+    <!-- Course Auto-Progression Toggle -->
+    <div class="card sub-card">
+      <div class="card-info">
+        <span class="card-label">Auto-Advance Course</span>
+        <span class="card-desc">Click next lecture automatically on video finish</span>
+      </div>
+      <label class="toggle-switch small">
+        <input type="checkbox" id="toggle-autoadvance" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Footer Status -->
+    <footer class="footer">
+      <div class="telemetry-shield">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>High-Priority Telemetry Capture Active</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
