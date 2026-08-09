@@ -59,6 +59,10 @@ Click the **Coursera Speed Enhancer icon** in your browser's toolbar to:
 * Turn auto-advance on or off.
 * Pause or resume the extension.
 
+### IMPORTANT NOTICE
+* If on next video the extension does not load the speed, you can simple drag the bar to the starting of the video and the extension will resume its functioning but this issue is rare
+* Open to Further suggestions or feature addition, if there is any bug you noticed, you can initialize the pull request 
+
 ---
 
 ## 📄 License
