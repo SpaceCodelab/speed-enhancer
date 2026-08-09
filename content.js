@@ -1,7 +1,7 @@
 /**
- * Coursera 10x Speed & Auto-Progression - MAIN Execution World Script
- * Features continuous multi-video persistence, SPA navigation hooks,
- * readyState-safe rate enforcement, and seamless auto-progression across consecutive lectures.
+ * Coursera 16x Turbo Speed & Auto-Progression - MAIN Execution World Script
+ * Features prototype-level playbackRate trapping, autoplay lifecycle hooks,
+ * instant startup pulsing, and continuous multi-video persistence.
  */
 
 (function () {
@@ -31,16 +31,89 @@
     );
   }
 
+  // Preserve native property descriptors before patching
+  const nativePlaybackRateDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLMediaElement.prototype,
+    'playbackRate'
+  );
+  const nativeDefaultPlaybackRateDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLMediaElement.prototype,
+    'defaultPlaybackRate'
+  );
+  const nativePlay = HTMLMediaElement.prototype.play;
+
   /**
-   * Safely enforce playback rate on a video element
+   * 1. Prototype Property Traps
+   * Intercepts Coursera's player and telemetry scripts at the V8 prototype level
+   * so any programmatic attempt by the host player to set playbackRate to 1.0 is instantly overridden.
+   */
+  if (nativePlaybackRateDescriptor && nativePlaybackRateDescriptor.set) {
+    Object.defineProperty(HTMLMediaElement.prototype, 'playbackRate', {
+      get: function () {
+        return nativePlaybackRateDescriptor.get.call(this);
+      },
+      set: function (value) {
+        if (state.enabled && this.tagName === 'VIDEO') {
+          const targetRate = Number(state.playbackSpeed) || 16.0;
+          return nativePlaybackRateDescriptor.set.call(this, targetRate);
+        }
+        return nativePlaybackRateDescriptor.set.call(this, value);
+      },
+      configurable: true,
+      enumerable: true
+    });
+  }
+
+  if (nativeDefaultPlaybackRateDescriptor && nativeDefaultPlaybackRateDescriptor.set) {
+    Object.defineProperty(HTMLMediaElement.prototype, 'defaultPlaybackRate', {
+      get: function () {
+        return nativeDefaultPlaybackRateDescriptor.get.call(this);
+      },
+      set: function (value) {
+        if (state.enabled && this.tagName === 'VIDEO') {
+          const targetRate = Number(state.playbackSpeed) || 16.0;
+          return nativeDefaultPlaybackRateDescriptor.set.call(this, targetRate);
+        }
+        return nativeDefaultPlaybackRateDescriptor.set.call(this, value);
+      },
+      configurable: true,
+      enumerable: true
+    });
+  }
+
+  /**
+   * 2. Prototype Autoplay Hook
+   * Triggers immediately when Coursera's autoplay engine calls video.play()
+   */
+  HTMLMediaElement.prototype.play = function (...args) {
+    if (state.enabled && this.tagName === 'VIDEO') {
+      const targetRate = Number(state.playbackSpeed) || 16.0;
+      if ('preservesPitch' in this) this.preservesPitch = true;
+      if ('webkitPreservesPitch' in this) this.webkitPreservesPitch = true;
+      if ('mozPreservesPitch' in this) this.mozPreservesPitch = true;
+
+      try {
+        if (nativePlaybackRateDescriptor && nativePlaybackRateDescriptor.set) {
+          nativePlaybackRateDescriptor.set.call(this, targetRate);
+        }
+      } catch (e) {}
+
+      pulseStartupEnforcement(this);
+    }
+    return nativePlay.apply(this, args);
+  };
+
+  /**
+   * Safely enforce playback rate on a specific video element
    */
   function enforceRate(video) {
     if (!state.enabled || !video) return;
 
-    // If media source is still in HAVE_NOTHING (readyState 0), attach a one-time ready listener
+    // Attach one-time listeners if video is in HAVE_NOTHING (readyState 0)
     if (video.readyState === 0) {
       const applyWhenReady = () => {
         enforceRate(video);
+        pulseStartupEnforcement(video);
         video.removeEventListener('loadedmetadata', applyWhenReady);
         video.removeEventListener('canplay', applyWhenReady);
         video.removeEventListener('playing', applyWhenReady);
@@ -57,23 +130,44 @@
       try {
         state.isEnforcing = true;
 
-        // Prevent audio decoder hardware crashes at extreme speeds
         if ('preservesPitch' in video) video.preservesPitch = true;
         if ('webkitPreservesPitch' in video) video.webkitPreservesPitch = true;
         if ('mozPreservesPitch' in video) video.mozPreservesPitch = true;
 
-        video.playbackRate = targetRate;
-        video.defaultPlaybackRate = targetRate;
+        if (nativePlaybackRateDescriptor && nativePlaybackRateDescriptor.set) {
+          nativePlaybackRateDescriptor.set.call(video, targetRate);
+          nativeDefaultPlaybackRateDescriptor.set.call(video, targetRate);
+        } else {
+          video.playbackRate = targetRate;
+          video.defaultPlaybackRate = targetRate;
+        }
 
         updateFloatingHud();
       } catch (err) {
-        console.warn('[Coursera 10x] Rate setting caught:', err);
+        console.warn('[Coursera 16x] Rate enforcement caught:', err);
       } finally {
         setTimeout(() => {
           state.isEnforcing = false;
-        }, 50);
+        }, 40);
       }
     }
+  }
+
+  /**
+   * Rapid startup pulse
+   * Actively reinforces 16x speed every 100ms for the first 2.5 seconds of a newly loaded/autoplayed video
+   */
+  function pulseStartupEnforcement(video) {
+    if (!state.enabled || !video) return;
+    let iterations = 0;
+    const pulseInterval = setInterval(() => {
+      iterations++;
+      if (iterations > 25 || !state.enabled) {
+        clearInterval(pulseInterval);
+        return;
+      }
+      enforceRate(video);
+    }, 100);
   }
 
   /**
@@ -258,8 +352,9 @@
 
     log('Registering video element in V8 context:', video);
 
-    // Initial enforcement
+    // Initial enforcement and startup pulse
     enforceRate(video);
+    pulseStartupEnforcement(video);
 
     /**
      * High-priority capture-phase ratechange listener
@@ -269,8 +364,6 @@
       () => {
         if (state.isEnforcing) return;
         if (!state.enabled) return;
-
-        // When Coursera changes videos or resets speed, re-enforce rate
         enforceRate(video);
       },
       true
@@ -280,8 +373,9 @@
     video.addEventListener(
       'loadstart',
       () => {
-        state.autoAdvanceTimer = null; // Clear completion lock for new video
+        state.autoAdvanceTimer = null;
         enforceRate(video);
+        pulseStartupEnforcement(video);
       },
       { passive: true }
     );
@@ -294,13 +388,16 @@
       { passive: true }
     );
 
-    // Playback events to maintain speed seamlessly across consecutive lectures
-    ['loadedmetadata', 'canplay', 'canplaythrough', 'play', 'playing'].forEach((eventName) => {
+    // Lifecycle triggers: instantly enforce rate when media buffers or plays
+    ['loadedmetadata', 'canplay', 'canplaythrough', 'play', 'playing', 'seeked', 'seeking'].forEach((eventName) => {
       video.addEventListener(
         eventName,
         () => {
           if (state.enabled) {
             enforceRate(video);
+            if (eventName === 'play' || eventName === 'playing') {
+              pulseStartupEnforcement(video);
+            }
           }
         },
         { capture: true, passive: true }
@@ -326,7 +423,9 @@
           log('Buffer stall recovery active.');
           try {
             state.isEnforcing = true;
-            video.playbackRate = 1.0;
+            if (nativePlaybackRateDescriptor && nativePlaybackRateDescriptor.set) {
+              nativePlaybackRateDescriptor.set.call(video, 1.0);
+            }
             setTimeout(() => {
               state.isEnforcing = false;
               if (state.enabled && !video.paused) {
@@ -387,7 +486,6 @@
 
   /**
    * SPA Navigation Interceptor
-   * Detects Coursera URL changes when user or auto-advancer moves to next lecture
    */
   function handleUrlChange() {
     if (window.location.href !== state.currentLectureUrl) {
@@ -395,12 +493,14 @@
       log('SPA Navigation detected to new lecture:', state.currentLectureUrl);
       state.autoAdvanceTimer = null;
 
-      // Re-scan and enforce immediately on the new lecture
       setTimeout(() => {
         scanAndRegisterVideos();
         const videos = document.querySelectorAll('video');
-        videos.forEach((v) => enforceRate(v));
-      }, 200);
+        videos.forEach((v) => {
+          enforceRate(v);
+          pulseStartupEnforcement(v);
+        });
+      }, 150);
     }
   }
 
@@ -421,9 +521,7 @@
   }
 
   /**
-   * Background Watchdog Interval
-   * Automatically re-applies target speed to any newly playing or transitioning video
-   * without requiring the user to toggle the extension on/off
+   * Background Watchdog Interval (300ms)
    */
   function setupWatchdog() {
     setInterval(() => {
@@ -445,7 +543,7 @@
 
       updateFloatingHud();
       handleUrlChange();
-    }, 600);
+    }, 300);
   }
 
   function applyConfig(newConfig) {
@@ -461,9 +559,14 @@
     videos.forEach((video) => {
       if (state.enabled) {
         enforceRate(video);
+        pulseStartupEnforcement(video);
       } else {
         try {
-          video.playbackRate = 1.0;
+          if (nativePlaybackRateDescriptor && nativePlaybackRateDescriptor.set) {
+            nativePlaybackRateDescriptor.set.call(video, 1.0);
+          } else {
+            video.playbackRate = 1.0;
+          }
         } catch (e) {}
       }
     });
@@ -505,5 +608,5 @@
   setupWatchdog();
   setupStorageListener();
 
-  log('Coursera 10x Speed & Auto-Progression running with multi-video persistence.');
+  log('Coursera 16x Turbo Speed & Auto-Progression active with prototype-level traps.');
 })();

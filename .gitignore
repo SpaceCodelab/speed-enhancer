@@ -1,0 +1,6 @@
+# Zip packages
+*.zip
+
+# OS metadata
+.DS_Store
+Thumbs.db
