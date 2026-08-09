@@ -61,18 +61,5 @@ Click the **Coursera Speed Enhancer icon** in your browser's toolbar to:
 
 ---
 
-## ❓ Frequently Asked Questions
-
-**Q: Does this extension collect any of my personal data?**  
-**A:** No. The extension runs 100% locally on your computer. It never connects to any external server and never collects any personal information, cookies, or login credentials.
-
-**Q: Can I use normal speed if I want to?**  
-**A:** Yes. Simply click the extension icon and select `1.0x` or toggle the switch off.
-
-**Q: Why does Firefox say "Temporary Add-on"?**  
-**A:** When loading extensions manually in regular Firefox, they stay active until you restart the browser. You can reload it in 2 clicks anytime via `about:debugging`.
-
----
-
 ## 📄 License
 This project is open-source and licensed under the [MIT License](LICENSE).
