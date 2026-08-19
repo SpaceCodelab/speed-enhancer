@@ -53,7 +53,7 @@
         return nativePlaybackRateDescriptor.get.call(this);
       },
       set: function (value) {
-        if (state.enabled && this.tagName === 'VIDEO') {
+        if (state.enabled && this.tagName === 'VIDEO' && !this.ended) {
           const targetRate = Number(state.playbackSpeed) || 16.0;
           return nativePlaybackRateDescriptor.set.call(this, targetRate);
         }
@@ -70,7 +70,7 @@
         return nativeDefaultPlaybackRateDescriptor.get.call(this);
       },
       set: function (value) {
-        if (state.enabled && this.tagName === 'VIDEO') {
+        if (state.enabled && this.tagName === 'VIDEO' && !this.ended) {
           const targetRate = Number(state.playbackSpeed) || 16.0;
           return nativeDefaultPlaybackRateDescriptor.set.call(this, targetRate);
         }
@@ -86,7 +86,7 @@
    * Triggers immediately when Coursera's autoplay engine calls video.play()
    */
   HTMLMediaElement.prototype.play = function (...args) {
-    if (state.enabled && this.tagName === 'VIDEO') {
+    if (state.enabled && this.tagName === 'VIDEO' && !this.ended) {
       const targetRate = Number(state.playbackSpeed) || 16.0;
       if ('preservesPitch' in this) this.preservesPitch = true;
       if ('webkitPreservesPitch' in this) this.webkitPreservesPitch = true;
@@ -108,6 +108,7 @@
    */
   function enforceRate(video) {
     if (!state.enabled || !video) return;
+    if (video.ended) return;
 
     // Attach one-time listeners if video is in HAVE_NOTHING (readyState 0)
     if (video.readyState === 0) {
@@ -364,6 +365,7 @@
       () => {
         if (state.isEnforcing) return;
         if (!state.enabled) return;
+        if (video.ended) return;
         enforceRate(video);
       },
       true
@@ -440,6 +442,10 @@
 
     // Progression on finish
     video.addEventListener('ended', () => {
+      window.postMessage({
+        source: 'COURSERA_SPEED_MAIN_WORLD',
+        type: 'TRIGGER_COMPLETION'
+      }, '*');
       triggerAutoProgression();
     });
 
@@ -533,7 +539,7 @@
           registerVideo(video);
         }
 
-        if (video.readyState >= 1 && !video.paused) {
+        if (video.readyState >= 1 && !video.paused && !video.ended) {
           const targetRate = Number(state.playbackSpeed) || 16.0;
           if (Math.abs(video.playbackRate - targetRate) > 0.01) {
             enforceRate(video);

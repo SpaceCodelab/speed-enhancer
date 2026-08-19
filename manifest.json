@@ -33,6 +33,13 @@
     },
     {
       "matches": ["*://*.coursera.org/*"],
+      "js": ["network_interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.coursera.org/*"],
       "js": ["content.js"],
       "run_at": "document_start",
       "world": "MAIN",
@@ -56,6 +63,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "network_interceptor.js",
         "content.js",
         "icons/icon16.png",
         "icons/icon48.png",
